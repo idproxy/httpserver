@@ -21,11 +21,17 @@ type Context interface {
 	Init(*Config)
 	/************ CONTEXT PROCESSING ********/
 	UseRawPath() bool
+	GetStatus() int
+	SetStatus(code int)
+	GetMessage() string
+	SetMessage(string)
 	GetMethod() string
+	GetRequest() *http.Request
 	GetRequestPath() string
 	GetRawRequestPath() string
 	GetURLPath() string
 	GetParams() params.Params
+	GetRawQuery() string
 	SetPathSegments(pathsegment.PathSegments)
 	SetPathSegmentIndex(int)
 	IncrementPathSegmentIndex()
@@ -60,6 +66,8 @@ type context struct {
 
 	// dynamic updated during processing
 	errs     error
+	status   int
+	message  string
 	index    int8
 	handlers HandlerChain
 	params   params.Params
@@ -93,6 +101,7 @@ func (c *context) Init(cfg *Config) {
 	// need to reinitialize the
 	c.index = 0
 	c.handlers = New()
+	c.status = http.StatusOK
 
 	c.urlPath = c.GetRequestPath()
 	if c.UseRawPath() && len(c.GetRawRequestPath()) > 0 {
@@ -103,12 +112,32 @@ func (c *context) Init(cfg *Config) {
 
 /************ CONTEXT PROCESSING ********/
 
+func (c *context) GetStatus() int {
+	return c.status
+}
+
+func (c *context) SetStatus(code int) {
+	c.status = code
+}
+
+func (c *context) GetMessage() string {
+	return c.message
+}
+
+func (c *context) SetMessage(s string) {
+	c.message = s
+}
+
 func (c *context) UseRawPath() bool {
 	return c.useRawPath
 }
 
 func (c *context) GetMethod() string {
 	return c.r.Method
+}
+
+func (c *context) GetRequest() *http.Request {
+	return c.r
 }
 
 // GetRequestPath return the url path from the http request
@@ -129,6 +158,10 @@ func (c *context) GetURLPath() string {
 
 func (c *context) GetParams() params.Params {
 	return c.params
+}
+
+func (c *context) GetRawQuery() string {
+	return c.r.URL.RawQuery
 }
 
 // SetPathSegments sets the path segment for the
@@ -192,6 +225,7 @@ func (c *context) Next() {
 	fmt.Printf("index: %d handler size: %d\n", c.index, c.handlers.Size())
 	for c.index < int8(c.handlers.Size()) {
 		// call the handler
+		fmt.Println(c.handlers.Get(int(c.index)))
 		c.handlers.Get(int(c.index))(c)
 		c.index++
 	}

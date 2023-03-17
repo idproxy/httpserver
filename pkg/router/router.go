@@ -6,7 +6,6 @@ package router
 // operation to lookup the respective handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/idproxy/httpserver/internal/utils"
@@ -22,6 +21,7 @@ type Router interface {
 	Route
 	// Group creates a new router using a new relative path from the base router
 	Group(string, ...hctx.HandlerFunc) Router
+	GetHandlers() hctx.HandlerChain
 }
 
 type Route interface {
@@ -60,6 +60,10 @@ type router struct {
 	routes   routetree.Routes
 }
 
+func (r *router) GetHandlers()  hctx.HandlerChain {
+	return r.handlers
+}
+
 func (r *router) Group(relativePath string, handlers ...hctx.HandlerFunc) Router {
 	return &router{
 		handlers: hctx.New(handlers...),
@@ -70,7 +74,7 @@ func (r *router) Group(relativePath string, handlers ...hctx.HandlerFunc) Router
 }
 
 func (r *router) Use(middleware ...hctx.HandlerFunc) Router {
-	r.handlers.Merge(hctx.New(middleware...))
+	r.handlers = r.combineHandlers(hctx.New(middleware...))
 	return r
 }
 
@@ -121,7 +125,7 @@ func (r *router) Any(relativePath string, handlers ...hctx.HandlerFunc) Router {
 func (r *router) add(httpMethod, relativePath string, handlers hctx.HandlerChain) Router {
 	absolutePath := r.getAbsolutePath(relativePath)
 	handlers = r.combineHandlers(handlers)
-	fmt.Println(absolutePath)
+
 	r.addRoute(httpMethod, absolutePath, handlers)
 	return r
 }
@@ -144,7 +148,7 @@ func (r *router) combineHandlers(handlers hctx.HandlerChain) hctx.HandlerChain {
 	if (r.handlers.Size() + handlers.Size()) > int(maxHandlers) {
 		panic("too many handlers")
 	}
-	return r.handlers.Merge(handlers)
+	return r.handlers.Combine(handlers)
 }
 
 func (r *router) getAbsolutePath(relativePath string) string {

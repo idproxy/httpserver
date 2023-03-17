@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/idproxy/httpserver/pkg/hctx"
+	"github.com/idproxy/httpserver/pkg/middleware/logger"
 	"github.com/idproxy/httpserver/pkg/server"
 )
 
@@ -12,6 +13,7 @@ var db = make(map[string]string)
 
 func main() {
 	s := server.New()
+	s.Router().Use(logger.Logger())
 	r := s.Router()
 
 	r.GET("/", func(hctx hctx.Context) {
@@ -79,5 +81,5 @@ func main() {
 	})
 
 	s.PrintRoutes()
-	s.Run(":8888")
+	s.Run(":8889")
 }

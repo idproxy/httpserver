@@ -118,24 +118,6 @@ func (r *routes) AddRoute(httpMethod, absolutePath string, handlers hctx.Handler
 }
 
 // Below are the runtime methods
-/*
-type RequestContext struct {
-	HttpMethod string
-	Path       string
-	Params     params.Params
-	//skippedNodes   *[]skippedNode
-	Unescape       bool
-	PathSegments   []pathSegment
-	PathSegmentIdx int
-}
-
-type RouteContext struct {
-	Handlers hctx.HandlerChain
-	Params   params.Params
-	//tsr      bool
-	//fullPath string
-}
-*/
 
 // GetRouteContext provides the route context of the http request based on searching the routes
 // in the http server router
@@ -148,17 +130,26 @@ func (r *routes) GetRouteContext(hctx hctx.Context) {
 	pathSegments, valid := pathsegment.New(hctx.GetURLPath())
 	if !valid {
 		// error while processing path
+		hctx.SetStatus(http.StatusBadRequest)
+		hctx.SetMessage(string(default400Body))
 		return
 	}
 	fmt.Printf("getValue -> pathSegments: %v \n", pathSegments)
 	n, ok := r.routes[hctx.GetMethod()]
 	if !ok {
 		// httpMethod not found
+		hctx.SetStatus(http.StatusNotFound)
+		hctx.SetMessage(string(default404Body))
 		return
 	}
 	if pathSegments.Size() == 1 {
 		// return the handlers attached to the route
 		hctx.SetHandlers(n.handlers)
+		// if no handlers attached the route is not found
+		if n.handlers == nil || n.handlers.Size() == 0 {
+			hctx.SetStatus(http.StatusNotFound)
+			hctx.SetMessage(string(default404Body))
+		}
 		return
 	}
 

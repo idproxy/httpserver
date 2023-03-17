@@ -1,13 +1,15 @@
 package hctx
 
+import "fmt"
+
 type HandlerFunc func(hctx Context)
 
 type HandlerChain interface {
 	Add(fn HandlerFunc)
 	Get(index int) HandlerFunc
 	Size() int
-	Merge(h HandlerChain) HandlerChain
-	list() []HandlerFunc
+	Combine(h HandlerChain) HandlerChain
+	List() []HandlerFunc
 }
 
 func New(handlers ...HandlerFunc) HandlerChain {
@@ -30,14 +32,17 @@ func (r *handlerChain) Size() int {
 	return len(*r)
 }
 
-func (r *handlerChain) list() []HandlerFunc {
+func (r *handlerChain) List() []HandlerFunc {
 	return *r
 }
 
-func (r *handlerChain) Merge(h HandlerChain) HandlerChain {
+func (r *handlerChain) Combine(h HandlerChain) HandlerChain {
 	finalSize := r.Size() + h.Size()
-	mergedHandlerChain := make(handlerChain, finalSize)
-	copy(mergedHandlerChain, *r)
-	copy(mergedHandlerChain[r.Size():], h.list())
-	return &mergedHandlerChain
+	mergedHandlerChain := make(handlerChain, 0, finalSize)
+	mergedHandlerChain = append(mergedHandlerChain, *r...)
+	mergedHandlerChain = append(mergedHandlerChain, h.List()...)
+	for _, h := range *r {
+		fmt.Printf("merge handlers: %#v\n", h)
+	}
+	return New(mergedHandlerChain...)
 }

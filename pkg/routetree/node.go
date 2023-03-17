@@ -2,6 +2,7 @@ package routetree
 
 import (
 	"fmt"
+	"net/http"
 	"sync"
 
 	"github.com/idproxy/httpserver/internal/pathsegment"
@@ -71,24 +72,18 @@ func (r *node) GetRouteContext(hctx hctx.Context) {
 		node, ok = r.children[wildcard]
 		if !ok {
 			// no wildcard found in this pathSegment
+			hctx.SetStatus(http.StatusNotFound)
+			hctx.SetMessage(string(default404Body))
 			return
 		}
 		// wildcard exists for the pathSegment
 		// add the param KeyValue to the parameter list
-		fmt.Printf("params: %v\n", hctx.GetParams())
-		/*
-			i := len(*reqCtx.params)
-			*reqCtx.params = (*reqCtx.params)[:i+1]
-			(*reqCtx.params)[i] = params.Param{
-				Key:   node.pathSegment.value[1:],
-				Value: reqCtx.pathSegments[reqCtx.pathSegmentIdx].value,
-			}
-		*/
+		//fmt.Printf("params: %v\n", hctx.GetParams())
 		hctx.GetParams().Add(params.Param{
 			Key:   node.PathSegment.Value[1:],
 			Value: hctx.GetPathSegments().Get(hctx.GetPathSegmentIndex()).Value,
 		})
-		fmt.Printf("params: %v\n", hctx.GetParams().List())
+		//fmt.Printf("params: %v\n", hctx.GetParams().List())
 	}
 
 	fmt.Printf("getValue: pathSegments %v pathSegmentIdx: %d total ps length: %d\n",
@@ -96,11 +91,17 @@ func (r *node) GetRouteContext(hctx hctx.Context) {
 		hctx.GetPathSegmentIndex(),
 		hctx.GetPathSegments().Size()-1)
 	if hctx.GetPathSegmentIndex() == hctx.GetPathSegments().Size()-1 {
-		if r.handlers != nil {
-			fmt.Printf("getValue: handlers: %v\n", r.handlers.Size())
-		}
-		
+		/*
+			if r.handlers != nil {
+				fmt.Printf("getValue: handlers: %v\n", r.handlers.Size())
+			}
+		*/
+
 		hctx.SetHandlers(node.handlers)
+		if node.handlers == nil || node.handlers.Size() == 0 {
+			hctx.SetStatus(http.StatusNotFound)
+			hctx.SetMessage(string(default404Body))
+		}
 		return
 	}
 	hctx.IncrementPathSegmentIndex()

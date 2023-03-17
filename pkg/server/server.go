@@ -12,11 +12,6 @@ import (
 	"golang.org/x/net/http2/h2c"
 )
 
-var (
-	default404Body = []byte("404 page not found")
-	//default405Body = []byte("405 method not allowed")
-)
-
 type Server interface {
 	Router() router.Router
 	Run(address string) error
@@ -131,10 +126,16 @@ func (r *server) handleHTTPRequest(hctx hctx.Context) {
 		}
 	*/
 
-	//hctx.SetHandlers(r.allNoRoute)
-	serveError(hctx, http.StatusNotFound, default404Body)
+	// when there are no routes we check if there are middleware
+	// handlers which should execute
+	hctx.SetHandlers(r.Router().GetHandlers())
+	if hctx.GetHandlers() != nil && hctx.GetHandlers().Size() > 0 {
+		hctx.Next()
+	}
+	serveError(hctx)
 }
 
-func serveError(hctx hctx.Context, code int, defaultMessage []byte) {
-	hctx.String(code, string(defaultMessage))
+func serveError(hctx hctx.Context) {
+
+	hctx.String(hctx.GetStatus(), hctx.GetMessage())
 }
